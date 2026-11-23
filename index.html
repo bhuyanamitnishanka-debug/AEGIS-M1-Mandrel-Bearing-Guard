@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AEGIS-M1 | Mandrel Bearing Monitor</title>
+  <meta name="theme-color" content="#07111f" />
+  <style>
+    :root { --bg:#07111f; --panel:#111e31; --card:#0b1728; --line:#263b57; --text:#eef6ff; --muted:#93a9c2; --cyan:#38bdf8; --green:#22c55e; --amber:#f59e0b; --red:#ef4444; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:Inter,Segoe UI,system-ui,sans-serif; }
+    .shell { max-width:1500px; margin:auto; padding:18px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:15px 18px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+    h1 { margin:0; color:var(--cyan); font-size:clamp(18px,2.2vw,26px); }
+    .subtitle { color:var(--muted); margin-top:4px; font-size:13px; }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; }
+    button { border:1px solid #3b5575; border-radius:7px; background:#17273c; color:white; padding:9px 11px; cursor:pointer; font-weight:700; }
+    button:hover { filter:brightness(1.12); } button.active { background:var(--cyan); color:#062033; } button.danger { background:#7f1d1d; } button.export { background:#1d4ed8; }
+    .grid { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(360px,.65fr); gap:16px; margin-top:16px; }
+    @media(max-width:1050px){ .grid { grid-template-columns:1fr; } }
+    .panel { border:1px solid var(--line); border-radius:14px; background:var(--panel); padding:15px; }
+    .panel-title { display:flex; justify-content:space-between; gap:10px; color:var(--cyan); font-size:13px; font-weight:800; text-transform:uppercase; margin-bottom:12px; }
+    svg { width:100%; height:auto; display:block; border:1px solid var(--line); border-radius:10px; background:#050b14; }
+    .kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .kpi { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; min-height:92px; }
+    .label { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.7px; }
+    .value { font-size:25px; font-weight:800; margin:5px 0; }
+    .pill { display:inline-block; border-radius:20px; padding:3px 8px; font-size:11px; font-weight:800; }
+    .safe { background:rgba(34,197,94,.16); color:#4ade80; } .warn { background:rgba(245,158,11,.16); color:#fbbf24; } .dangerPill { background:rgba(239,68,68,.16); color:#f87171; }
+    canvas { width:100%; height:190px; display:block; background:#050b14; border:1px solid var(--line); border-radius:10px; }
+    .banner { margin-top:11px; border-radius:9px; border:1px solid var(--line); padding:10px; text-align:center; font-weight:800; font-size:13px; }
+    .banner.safe { background:rgba(34,197,94,.08); } .banner.warn { background:rgba(245,158,11,.12); } .banner.dangerPill { background:rgba(239,68,68,.12); }
+    .logline { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size12px; margin-top:10px; }
+    .tabs { display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--line); margin-top:16px; padding:14px 0 10px; }
+    .docs { padding:14px; }
+    .doc { display:none; } .doc.active { display:block; }
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:13px; } .card h3 { color:var(--cyan); margin:0 0 7px; font-size14px; }
+    .card p { margin:0; color:#cbd8e7; font-size13px; line-height:1.55; }
+    .notice { border:1px solid #7c5c19; background:#241b09; color:#fcd34d; border-radius:10px; padding:10px 12px; margin:12px 0 0; font-size12px; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div><h1>AEGIS-M1 // Mandrel Bearing Guard</h1><div class="subtitle">Gantry lift concept • AE and oil debris telemetry • simulation only</div></div>
+    <div class="controls">
+      <button class="mode active" data-mode="AUTO">Auto Cycle</button>
+      <button class="mode" data-mode="STARTUP">Startup</button>
+      <button class="mode" data-mode="HIGHSPEED">High-Speed</button>
+      <button class="mode" data-mode="SHUTDOWN">Shutdown</button>
+      <button id="lever">Lever: AUTO</button>
+      <button id="csv" class="export">Export CSV</button>
+      <button id="json" class="export">Export JSON</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel">
+      <div class="panel-title"><span>Overhead Gantry & Compound Lever-Gear Blueprint</span><span style="color:#4ade80">● Operator distance</span></div>
+      <svg viewBox="0 0 880 530" role="img" aria-label="Overhead gantry bearing lift blueprint">
+        <defs><pattern id="grid" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M25 0H0V25" fill="none" stroke="#17283d"/></pattern></defs>
+        <rect width="880" height="530" fill="#060c16"/><rect width="880" height="530" fill="url(#grid)"/>
+        <rect x="175" y="18" width="530" height="26" rx="4" fill="#334155" stroke="#38bdf8" stroke-width="2"/><text x="315" y="35" fill="#38bdf8" font-size="11" font-weight="bold">OVERHEAD GANTRY BRIDGE</text>
+        <rect x="185" y="44" width="22" height="450" fill="#1e293b"/><rect x="673" y="44" width="22" height="450" fill="#1e293b"/>
+        <g id="cylinders"><rect id="cylL" x="342" y="44" width="44" height="42" rx="4" fill="#0284c7"/><rect id="cylR" x="482" y="44" width="44" height="42" rx="4" fill="#0284c7"/><line x1="364" y1="86" x2="364" y2="305" stroke="#38bdf8" stroke-width="3"/><line x1="504" y1="86" x2="504" y2="305" stroke="#38bdf8" stroke-width="3"/></g>
+        <rect x="342" y="110" width="44" height="310" fill="#64748b"/><rect x="482" y="110" width="44" height="310" fill="#64748b"/>
+        <rect x="255" y="155" width="365" height="24" fill="#15803d"/><rect x="270" y="179" width="22" height="255" fill="#15803d"/><rect x="583" y="179" width="22" height="255" fill="#15803d"/><rect x="240" y="434" width="395" height="22" fill="#15803d"/>
+        <rect x="322" y="195" width="84" height="75" rx="5" fill="#334155"/><rect x="462" y="195" width="84" height="75" rx="5" fill="#334155"/><g stroke="#94a3b8" stroke-width="2.5"><line x1="332" y1="195" x2="352" y2="270"/><line x1="357" y1="195" x2="377" y2="270"/><line x1="382" y1="195" x2="402" y2="270"/><line x1="472" y1="195" x2="492" y2="270"/><line x1="497" y1="195" x2="517" y2="270"/><line x1="522" y1="195" x2="542" y2="270"/></g>
+        <rect x="312" y="295" width="104" height="60" rx="4" fill="#475569"/><rect x="452" y="295" width="104" height="60" rx="4" fill="#475569"/><rect id="filmL" x="335" y="300" width="58" height="50" fill="none" stroke="#22c55e" stroke-width="3"/><rect id="filmR" x="475" y="300" width="58" height="50" fill="none" stroke="#22c55e" stroke-width="3"/>
+        <g fill="rgba(16,185,129,.08)" stroke="#10b981" stroke-dasharray="5"><rect x="10" y="345" width="155" height="155" rx="8"/><rect x="715" y="345" width="155" height="155" rx="8"/></g><text x="20" y="366" fill="#10b981" font-size="10" font-weight="bold">SAFE OPERATOR BAY (L)</text><text x="725" y="366" fill="#10b981" font-size="10" font-weight="bold">SAFE OPERATOR BAY (R)</text>
+        <polyline points="85,465 185,465 185,65 342,65" fill="none" stroke="#f59e0b" stroke-width="4"/><polyline points="795,465 695,465 695,65 526,65" fill="none" stroke="#f59e0b" stroke-width="4"/><circle cx="85" cy="465" r="15" fill="#f59e0b"/><circle cx="795" cy="465" r="15" fill="#f59e0b"/><circle cx="185" cy="65" r="11" fill="#f59e0b"/><circle cx="695" cy="65" r="11" fill="#f59e0b"/>
+        <line id="leverL" x1="85" y1="465" x2="50" y2="390" stroke="#22c55e" stroke-width="7" stroke-linecap="round"/><line id="leverR" x1="795" y1="465" x2="830" y2="390" stroke="#22c55e" stroke-width="7" stroke-linecap="round"/><text x="18" y="492" fill="#eef6ff" font-size="10">Locomotive-Style Ground Lever</text><text x="720" y="492" fill="#eef6ff" font-size="10">Compound Gear-Lever Control</text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><span>Live Sensor Telemetry</span><span id="tick">Simulation</span></div>
+      <div class="kpis">
+        <div class="kpi"><div class="label">Roll Shaft Speed</div><div class="value" id="rpm">32.0 RPM</div><span id="regime" class="pill warn">BOUNDARY ZONE</span></div>
+        <div class="kpi"><div class="label">Acoustic Emission</div><div class="value" id="ae">64.2 dB</div><span class="pill safe">LIMIT &lt; 68 dB</span></div>
+        <div class="kpi"><div class="label">Wear Debris</div><div class="value" id="ppm">28 ppm</div><span class="pill safe">LIMIT &lt; 45 ppm</span></div>
+        <div class="kpi"><div class="label">Oil Temperature</div><div class="value" id="temp">52.4 °C</div><span class="pill safe">45–80 °C</span></div>
+      </div>
+      <canvas id="chart" width="900" height="190"></canvas>
+      <div id="banner" class="banner safe">GANTRY HYDRAULIC LIFT: STANDBY</div>
+      <div class="logline"><span id="count">Recorded Telemetry Frames: 0</span><button id="clear">Clear Buffer</button></div>
+      <div class="notice">Demonstration only. No page control is connected to real hydraulic actuators or industrial safety systems.</div>
+    </section>
+  </div>
+
+  <div class="tabs"><button class="lang active" data-lang="en">English</button><button class="lang" data-lang="hi">हिंदी</button><button class="lang" data-lang="or">ଓଡ଼ିଆ</button></div>
+  <section class="panel docs">
+    <div id="en" class="doc active"><div class="cards">
+      <article class="card"><h3>Overhead Gantry</h3><p>Mount cylinders on an overhead frame, keeping hoses and seals away from hot billets and mill scale.</p></article>
+      <article class="card"><h3>Low-RPM Protection</h3><p>The concept provides a simulated 0.05–0.15 mm lift during startup and shutdown to reduce boundary wear.</p></article>
+      <article class="card"><h3>External Monitoring</h3><p>Track high-frequency AE, inline metallic debris and oil temperature without machining the bearing housing.</p></article>
+    </div></div>
+    <div id="hi" class="doc"><div class="cards"><article class="card"><h3>ओवरहेड गैन्ट्री</h3><p>हाइड्रोलिक सिलेंडर ऊपर लगे गैन्ट्री फ्रेम पर होते हैं, जिससे सील और पाइप गर्म लोहे और धूल से दूर रहते हैं।</p></article><article class="card"><h3>लो-आरपीएम सुरक्षा</h3><p>स्टार्टअप और शटडाउन पर 0.05–0.15 मिमी लिफ्ट का अवधारणात्मक सिमुलेशन बॉन्डरी घर्षण को कम करता है।</p></article><article class="card"><h3>बाहरी मॉनिटरिंग</h3><p>बाहरी AE, तेल से धातु के कण और तापमान की निगरानी—बियरिंग हाउसिंग में छेड़छाड़ के बिना।</p></article></div></div>
+    <div id="or" class="doc"><div class="cards"><article class="card"><h3>ଓଭରହେଡ୍ ଗ୍ୟାଣ୍ଟ୍ରି</h3><p>ହାଇଡ୍ରୋଲିକ୍ ସିଲିଣ୍ଡର ଉପର ଗ୍ୟାଣ୍ଟ୍ରି ଫ୍ରେମ୍‌ରେ ଥାଏ, ଯାହା ଦ୍ୱାରା ସିଲ୍ ଓ ପାଇପ୍ ଗରମ ଲୁହା ଓ ଧୂଳିଠାରୁ ସୁରକ୍ଷିତ।</p></article><article class="card"><h3>କମ୍ RPM ସୁରକ୍ଷା</h3><p>ଆରମ୍ଭ ଓ ବନ୍ଦ ସମୟରେ 0.05–0.15 mm ଲିଫ୍ଟ କଳ୍ପନା ଘର୍ଷଣକୁ କମାଇଥାଏ।</p></article><article class="card"><h3>ବାହ୍ୟ ତଦାରଖ</h3><p>AE, ତେଲରେ ଧାତୁ କଣିକା ଓ ତାପମାତ୍ରାକୁ ହାରାହାରି ସାଇଟିରେ ମନିଟର କରାଯାଏ।</p></article></div></div>
+  </section>
+</div>
+<script>
+let mode='AUTO', manual=false, tick=0;
+const history=Array(45).fill(44), records=[];
+const canvas=document.getElementById('chart'), ctx=canvas.getContext('2d');
+function setMode(m){ mode=m; document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===m)); }
+document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+document.querySelectorAll('.lang').forEach(b=>b.addEventListener('click',()=>{ document.querySelectorAll('.lang').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.doc').forEach(x=>x.classList.remove('active')); b.classList.add('active'); document.getElementById(b.dataset.lang).classList.add('active'); }));
+document.getElementById('lever').addEventListener('click',()=>{manual=!manual;const b=document.getElementById('lever');b.textContent=manual?'Lever: ENGAGED':'Lever: AUTO';b.style.background=manual?'#22c55e':'#17273c';b.style.color=manual?'#062033':'white';});
+document.getElementById('clear').addEventListener('click',()=>{records.length=0;updateCount();});
+function updateCount(){document.getElementById('count').textContent=`Recorded Telemetry Frames: ${records.length}`}
+function download(format){if(!records.length)return;const stamp=new Date().toISOString().replace(/[:.]/g,'-');let content,mime,name;if(format==='json'){content=JSON.stringify(records,null,2);mime='application/json';name=`AEGIS-M1-${stamp}.json`;}else{const keys=['timestamp','phase','shaft_rpm','ae_amplitude_db','wear_debris_ppm','temperature_c','lubrication_regime','gantry_lift_demo'];const rows=records.map(r=>keys.map(k=>r[k]).join(','));content=[keys.join(','),...rows].join('\n');mime='text/csv';name=`AEGIS-M1-${stamp}.csv`;}const blob=new Blob([content],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
+document.getElementById('csv').addEventListener('click',()=>download('csv'));document.getElementById('json').addEventListener('click',()=>download('json'));
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const th=canvas.height-((68-30)/60)*canvas.height;ctx.setLineDash([7,5]);ctx.strokeStyle='#ef4444';ctx.beginPath();ctx.moveTo(0,th);ctx.lineTo(canvas.width,th);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#ef4444';ctx.font='14px sans-serif';ctx.fillText('68 dB boundary threshold',10,th-8);ctx.strokeStyle='#38bdf8';ctx.lineWidth=3;ctx.beginPath();history.forEach((v,i)=>{const x=i/(history.length-1)*canvas.width,y=canvas.height-((v-30)/60)*canvas.height;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();}
+function update(){tick++;let phase=mode;if(mode==='AUTO'){const n=tick%18;phase=n<5?'STARTUP':n<13?'HIGHSPEED':'SHUTDOWN';}let rpm,ae,ppm,temp;if(phase==='STARTUP'){rpm=18+Math.random()*35;ae=manual?45+Math.random()*6:64+Math.random()*12;ppm=manual?18:30+Math.random()*20;temp=47+Math.random()*7;}else if(phase==='HIGHSPEED'){rpm=490+Math.random()*95;ae=39+Math.random()*9;ppm=11+Math.random()*10;temp=67+Math.random()*11;}else{rpm=14+Math.random()*32;ae=manual?46+Math.random()*6:66+Math.random()*12;ppm=manual?20:34+Math.random()*22;temp=73+Math.random()*6.5;}rpm=rpm.toFixed(1);ae=ae.toFixed(1);ppm=Math.floor(ppm);temp=temp.toFixed(1);document.getElementById('rpm').textContent=rpm+' RPM';document.getElementById('ae').textContent=ae+' dB';document.getElementById('ppm').textContent=ppm+' ppm';document.getElementById('temp').textContent=temp+' °C';const low=parseFloat(rpm)<120,high=parseFloat(ae)>68,lift=manual||high,film=lift?'#ef4444':'#22c55e';document.getElementById('filmL').setAttribute('stroke',film);document.getElementById('filmR').setAttribute('stroke',film);document.getElementById('cylL').setAttribute('fill',lift?'#22c55e':'#0284c7');document.getElementById('cylR').setAttribute('fill',lift?'#22c55e':'#0284c7');document.getElementById('leverL').setAttribute('x2',lift?'115':'50');document.getElementById('leverR').setAttribute('x2',lift?'765':'830');const reg=document.getElementById('regime');reg.textContent=low?'BOUNDARY ZONE':'HYDRODYNAMIC FILM';reg.className='pill '+(low?'warn':'safe');const b=document.getElementById('banner');b.textContent=manual?'MANUAL DEMO LIFT ENGAGED':high?'AE FRICTION SPIKE: DEMO LIFT TRIGGERED':'GANTRY HYDRAULIC LIFT: STANDBY';b.className='banner '+(high&&!manual?'dangerPill':manual?'warn':'safe');if(records.length>=500)records.shift();records.push({timestamp:new Date().toISOString(),phase,shaft_rpm:parseFloat(rpm),ae_amplitude_db:parseFloat(ae),wear_debris_ppm:ppm,temperature_c:parseFloat(temp),lubrication_regime:low?'BOUNDARY':'HYDRODYNAMIC',gantry_lift_demo:lift?'ACTIVE':'STANDBY'});updateCount();history.push(parseFloat(ae));history.shift();draw();}
+setInterval(update,1100);update();
+</script>
+</body>
+</html>
